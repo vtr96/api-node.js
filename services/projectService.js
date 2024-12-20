@@ -1,6 +1,7 @@
 const { readJSONFile, writeJSONFile } = require('../utils/fileHelper');
 const { generateId } = require('../utils/idGenerator');
 const path = require('path');
+const {isNumeric} = require("../utils/customs");
 
 const PROJECTS_FILE = path.join(__dirname, '..', 'data', 'projects.json');
 
@@ -32,13 +33,12 @@ const addProject = async (project) => {
     if (typeof project.description !== 'string' || project.description.trim() === '') {
         throw new Error('O campo "description" deve ser uma string não vazia.');
     }
-
     if (await isNameDuplicate(project.name)) {
         throw new Error(`O nome "${project.name}" já está em uso.`);
     }
+
     const projects = await readJSONFile(PROJECTS_FILE);
 
-    // Gera o ID do projeto
     project.id = generateProjectId();
 
     projects.push(project);
@@ -46,9 +46,14 @@ const addProject = async (project) => {
     return project;
 };
 
+
 const updateProject = async (projectId, updatedData) => {
     validatePayload(updatedData);
 
+    if (!isNumeric(projectId)) {
+        throw new Error('O id do projeto deve ser numérico.')
+    }
+    projectId = parseInt(projectId, 10);
     const projects = await readJSONFile(PROJECTS_FILE);
     const projectIndex = projects.findIndex((project) => project.id === projectId);
 

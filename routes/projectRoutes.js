@@ -3,33 +3,33 @@ const router = express.Router();
 const projectService = require('../services/projectService');
 
 // Listar projetos
-router.get('/', async (req, res) => {
+router.get('/', async (req, res, next) => {
     try {
         const projects = await projectService.getProjects();
         res.json(projects);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
 // Adicionar projeto
-router.post('/', async (req, res) => {
+router.post('/', async (req, res, next) => {
     try {
         const project = await projectService.addProject(req.body);
         res.status(201).json(project);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
 // Atualizar projeto
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req, res, next) => {
     try {
-        const projectId = parseInt(req.params.id, 10);
+        const projectId = req.params.id;
         const updatedProject = await projectService.updateProject(projectId, req.body);
         res.json(updatedProject);
     } catch (error) {
-        res.status(400).json({ error: error.message }); // Retorna erro de validação
+        next(error);
     }
 });
 
