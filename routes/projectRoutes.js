@@ -22,4 +22,15 @@ router.post('/', async (req, res) => {
     }
 });
 
+// Atualizar projeto
+router.put('/:id', async (req, res) => {
+    try {
+        const projectId = parseInt(req.params.id, 10);
+        const updatedProject = await projectService.updateProject(projectId, req.body);
+        res.json(updatedProject);
+    } catch (error) {
+        res.status(400).json({ error: error.message }); // Retorna erro de validação
+    }
+});
+
 module.exports = router;
