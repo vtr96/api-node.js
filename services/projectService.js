@@ -4,6 +4,7 @@ const path = require('path');
 const {isNumeric} = require("../utils/customs");
 
 const PROJECTS_FILE = path.join(__dirname, '..', 'data', 'projects.json');
+const TASKS_FILE = path.join(__dirname, '../data/tasks.json');
 
 const ALLOWED_FIELDS = ['name', 'description'];
 
@@ -21,9 +22,12 @@ const isNameDuplicate = async (name, ignoreId = null) => {
     return projects.some((project) => project.name === name && project.id !== ignoreId);
 };
 
-const addProject = async (project) => {
+const addProject = async (userId, project) => {
     validatePayload(project);
 
+    if (!project || typeof project !== 'object') {
+        throw new Error('Payload inválido. Um objeto com os campos "name" e "description" é esperado.');
+    }
     if (!project.name || !project.description) {
         throw new Error('Os campos "name" e "description" são obrigatórios.');
     }
@@ -40,25 +44,28 @@ const addProject = async (project) => {
     const projects = await readJSONFile(PROJECTS_FILE);
 
     project.id = generateProjectId();
-
+    project.userId = userId;
     projects.push(project);
+
     await writeJSONFile(PROJECTS_FILE, projects);
     return project;
 };
 
 
-const updateProject = async (projectId, updatedData) => {
+const updateProject = async (userId, projectId, updatedData) => {
     validatePayload(updatedData);
 
     if (!isNumeric(projectId)) {
-        throw new Error('O id do projeto deve ser numérico.')
+        throw new Error('O id do projeto deve ser numérico.');
     }
-    projectId = parseInt(projectId, 10);
+
     const projects = await readJSONFile(PROJECTS_FILE);
-    const projectIndex = projects.findIndex((project) => project.id === projectId);
+    const projectIndex = projects.findIndex(
+        (project) => project.id === parseInt(projectId, 10) && project.userId === userId
+    );
 
     if (projectIndex === -1) {
-        throw new Error('Projeto não encontrado.');
+        throw new Error('Projeto não pertence ao usuário.');
     }
 
     if (updatedData.name && await isNameDuplicate(updatedData.name, projectId)) {
@@ -73,6 +80,11 @@ const updateProject = async (projectId, updatedData) => {
 
 const getProjects = async () => {
     return await readJSONFile(PROJECTS_FILE);
+};
+
+const getProjectsByUser = async (userId) => {
+    const projects = await readJSONFile(PROJECTS_FILE);
+    return projects.filter((project) => project.userId === userId);
 };
 
 let lastProjectId = 0;
@@ -91,8 +103,36 @@ const generateProjectId = () => {
 
 initializeLastProjectId();
 
+const deleteProject = async (userId, projectId) => {
+    const projects = await readJSONFile(PROJECTS_FILE);
+    const projectIndex = projects.findIndex(
+        (project) => project.id === parseInt(projectId, 10) && project.userId === userId
+    );
+
+    if (projectIndex === -1) {
+        throw new Error('Projeto não pertence ao usuário.');
+    }
+
+    const deletedProject = projects[projectIndex];
+    const updatedProjects = projects.filter(
+        (project) => project.id !== parseInt(projectId, 10)
+    );
+
+    const tasks = await readJSONFile(TASKS_FILE);
+    const updatedTasks = tasks.filter(
+        (task) => task.projectId !== parseInt(projectId, 10)
+    );
+    await writeJSONFile(TASKS_FILE, updatedTasks);
+
+    await writeJSONFile(PROJECTS_FILE, updatedProjects);
+
+    return deletedProject;
+};
+
 module.exports = {
     getProjects,
+    getProjectsByUser,
     addProject,
+    deleteProject,
     updateProject
 };

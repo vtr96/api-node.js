@@ -1,24 +1,44 @@
 const express = require('express');
-const router = express.Router();
 const taskService = require('../services/taskService');
+const authenticate = require('../middleware/authMiddleware');
 
-// Listar tarefas (opcionalmente por projeto)
-router.get('/', async (req, res) => {
+const router = express.Router();
+
+router.use(authenticate);
+
+router.get('/', async (req, res, next) => {
     try {
-        const tasks = await taskService.getTasks(req.query.projectId);
+        const tasks = await taskService.getTasksByUser(req.user.id);
         res.json(tasks);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
     }
 });
 
-// Adicionar tarefa
-router.post('/', async (req, res) => {
+router.post('/', async (req, res, next) => {
     try {
-        const task = await taskService.addTask(req.body);
+        const task = await taskService.addTask(req.user.id, req.body);
         res.status(201).json(task);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        next(error);
+    }
+});
+
+router.put('/:id', async (req, res, next) => {
+    try {
+        const task = await taskService.updateTask(req.user.id, parseInt(req.params.id), req.body);
+        res.json(task);
+    } catch (error) {
+        next(error);
+    }
+});
+
+router.delete('/:id', async (req, res, next) => {
+    try {
+        await taskService.deleteTask(req.user.id, parseInt(req.params.id));
+        res.status(204).end();
+    } catch (error) {
+        next(error);
     }
 });
 
