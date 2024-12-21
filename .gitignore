@@ -131,6 +131,3 @@ dist
 
 .idea
 package-lock.json
-data/projects.json
-data/tasks.json
-data/users.json
